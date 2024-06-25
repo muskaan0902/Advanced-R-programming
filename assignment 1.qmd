@@ -1,0 +1,144 @@
+---
+title: "ASSIGNMENT 1: ADVANCED R PROGRAMMING"
+author: "MUSKAAN ARORA: 23205389"
+format:
+  revealjs:
+    smaller: true
+    scrollable: true
+    theme: moon 
+output:
+  revealjs:
+    center: true             
+    slideNumber: true        
+    controls: true           
+    progress: true           
+    history: true            
+    transition: slide        
+    width: 1200              
+    height: 800              
+    incremental: true        
+    highlight: tango         
+    code_folding: show       
+---
+
+## 1. Reading the data
+
+-   **Objective**: Loading and preprocessing two datasets (`hdro_indicators_ind.csv` and `hdro_indicators_irl.csv`) using the `data.table` package.
+
+    -   Removing the first row from each dataset (`hdro_ind` and `hdro_irl`) assuming it contains headers or metadata.
+
+```{r, echo = TRUE}
+# Installing and loading data.table 
+#install.packages("data.table")
+library(data.table)
+
+# Loading the data into data.table
+hdro_ind <- fread("hdro_indicators_ind.csv")
+hdro_irl <- fread("hdro_indicators_irl.csv")
+
+# Remove the first row from hdro_ind
+hdro_ind <- hdro_ind[-1,]
+
+# Remove the first row from hdro_irl
+hdro_irl <- hdro_irl[-1,]
+```
+
+## 2. Merging the Datasets
+
+-   **Objective**: Combining the two datasets (`hdro_ind` and `hdro_irl`) into one (`merged_hdro`) using the rbind fuction
+
+    -   Displaying the first few rows (`head`) of the merged dataset to inspect the structure and ensure the merge was successful.
+
+```{r, echo=TRUE}
+# Merging the datasets 
+merged_hdro <- rbind(hdro_ind, hdro_irl)
+
+# View the merged data
+head(merged_hdro)
+```
+
+## 3. Data exploration
+
+-   **Objective**: Perform basic data exploration and preprocessing on `merged_hdro`.
+
+    -   Converting the `value` column to numeric.
+
+    -   Computing a summary of the dataset to understand its distribution and characteristics.
+
+    -   Calculating quantiles of the value column to identify key statistical measures (25th, 50th, and 75th percentiles).
+
+```{r, echo=TRUE}
+#converting value to numeric
+merged_hdro[, value := as.numeric(value)]
+
+#summary of the merged data
+summary(merged_hdro)
+
+# Quantiles of 'value'
+quantiles_value <- quantile(merged_hdro$value, probs = c(0.25, 0.5, 0.75),na.rm=TRUE)
+print(quantiles_value)
+```
+
+## 4. Analysis using data.table
+
+-   **Objective**: Perform deeper analysis using `data.table` functionalities on `merged_hdro`.
+
+    -   Calculate summary statistics (`mean`, `median`, `min`, `max`, `sd`) by `country_name` and `year` using `data.table` syntax (`keyby`).
+
+```{r,echo=TRUE}
+# Convert merged_data to data.table
+setDT(merged_hdro)
+
+#Summary statistics by 'country_name'
+summary_by_country <- merged_hdro[, .(mean_value = mean(value, na.rm = TRUE),
+                                      median_value = median(value, na.rm = TRUE),
+                                      min_value = min(value, na.rm = TRUE),
+                                      max_value = max(value, na.rm = TRUE),
+                                      sd_value = sd(value, na.rm = TRUE)),
+                                  keyby = country_name]
+
+print(summary_by_country)
+
+#Summary statistics by 'year' and 'country'
+summary_by_year_country <- merged_hdro[, .(mean_value = mean(value, na.rm = TRUE),
+                                      median_value = median(value, na.rm = TRUE),
+                                      min_value = min(value, na.rm = TRUE),
+                                      max_value = max(value, na.rm = TRUE),
+                                      sd_value = sd(value, na.rm = TRUE)),
+                                  keyby = .(year,country_name)]
+
+print(summary_by_year_country)
+```
+
+## 5. Plotting
+
+-   **Objective**: Visualizing insights derived from the data using `ggplot2`.
+
+    -   Create a bar plot showing the mean value by `country_name`.
+
+    -   Generate a line plot illustrating the mean value trends over `year` for each `country_name`.
+
+```{r,echo=TRUE}
+library(ggplot2)
+
+# Plot of mean value by country_name
+ggplot(summary_by_country, aes(x = reorder(country_name, mean_value), y = mean_value)) +
+  geom_bar(stat = "identity", fill = "blue", color = "black") +
+  labs(title = "Mean Value by Country",
+       x = "Country",
+       y = "Mean Value") +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1))
+```
+
+```{r}
+# Plot of mean value by year and country
+ggplot(summary_by_year_country, aes(x = year, y = mean_value, group = country_name, color = country_name)) +
+  geom_line() +
+  labs(title = "Mean Value by Year and Country",
+       x = "Year",
+       y = "Mean Value",
+       color = "Country") +
+  theme_minimal() +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1),
+        legend.position = "bottom")
+```
